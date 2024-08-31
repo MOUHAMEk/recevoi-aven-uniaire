@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>MArisk - Réception des Avancements</title>
+    <!-- Lien vers FontAwesome pour utiliser des icônes -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* Style global */
+        body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f0f0;
+        }
+
+        /* En-tête (Header) */
+        header {
+            background-color: #2609cd;
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 24px;
+        }
+
+        /* Corps principal (Body) */
+        main {
+            padding: 40px;
+            text-align: center;
+            background-color: #ddd;
+        }
+
+        .section-box {
+            background-color: white;
+            padding: 30px;
+            border: 2px solid #4CAF50;
+            border-radius: 10px;
+            box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.2);
+            margin: 20px auto;
+            width: 60%;
+            text-align: center;
+        }
+
+        select, button {
+            padding: 15px;
+            margin: 10px 0;
+            font-size: 18px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+
+        .progress {
+            color: white;
+            padding: 5px;
+            border-radius: 5px;
+        }
+
+        .ferraille { background-color: orange; }
+        .coffre { background-color: #FF6347; } /* Couleur rouge clair */
+        .coule { background-color: #8B0000; } /* Couleur rouge foncé */
+
+        /* Pied de page (Footer) */
+        footer {
+            background-color: #333;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+    </style>
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-database.js"></script>
+</head>
+<body>
+
+<!-- En-tête -->
+<header>
+    <div>MArisk</div>
+    <div>Réception des Avancements</div>
+</header>
+
+<!-- Corps principal -->
+<main>
+    <div class="section-box">
+        <h1>Recevoir l'avancement des travaux</h1>
+        <button onclick="recevoirAvancement()">Recevoir l'avancement</button>
+
+        <div id="selectionSection" style="display:none;">
+            <select id="etage" onchange="selectEtage()">
+                <option value="">Sélectionner un étage</option>
+                <option value="RDC">RDC</option>
+                <option value="R+1">R+1</option>
+                <option value="R+2">R+2</option>
+                <option value="R+3">R+3</option>
+                <option value="R+4">R+4</option>
+            </select>
+
+            <select id="element" style="display:none;" onchange="afficherAvancement()">
+                <option value="">Sélectionner un élément</option>
+                <option value="Poteau">Poteau</option>
+                <option value="Poutre">Poutre</option>
+                <option value="Plancher">Plancher</option>
+                <option value="Escalier">Escalier</option>
+                <option value="Ascenseur">Ascenseur</option>
+            </select>
+        </div>
+
+        <div id="tableSection" style="display:none;">
+            <table id="elementTable">
+                <thead>
+                    <tr>
+                        <th>Nom de l'élément</th>
+                        <th>Section</th>
+                        <th>Ferraillage</th>
+                        <th>Avancement</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Contenu dynamique sera ajouté ici -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+
+<!-- Pied de page (Footer) -->
+<footer>
+    <div class="contact">
+        <p>© 2024 Suivi des Travaux - MArisk</p>
+    </div>
+</footer>
+
+<script>
+    // Configuration Firebase
+    var firebaseConfig = {
+        apiKey: "AIzaSyCOA0a_rjXqY99KXyyuHEiPOJDGGapZQUo",
+        authDomain: "suivi-49954.firebaseapp.com",
+        databaseURL: "https://suivi-49954-default-rtdb.firebaseio.com",
+        projectId: "suivi-49954",
+        storageBucket: "suivi-49954.appspot.com",
+        messagingSenderId: "141836603566",
+        appId: "1:141836603566:web:aaff934468238d958cdd3f",
+        measurementId: "G-3CMYEPPYK8"
+    };
+    firebase.initializeApp(firebaseConfig);
+    var database = firebase.database();
+
+    // Fonction pour recevoir l'avancement
+    function recevoirAvancement() {
+        document.getElementById('selectionSection').style.display = 'block';
+    }
+
+    // Fonction pour sélectionner un étage
+    function selectEtage() {
+        document.getElementById('element').style.display = 'block';
+    }
+
+    // Fonction pour afficher l'avancement
+    function afficherAvancement() {
+        const etage = document.getElementById('etage').value;
+        const element = document.getElementById('element').value;
+
+        if (etage && element) {
+            document.getElementById('tableSection').style.display = 'block';
+            chargerAvancement(etage, element);
+        }
+    }
+
+    // Fonction pour charger les données d'avancement depuis Firebase
+    function chargerAvancement(etage, element) {
+        const tbody = document.getElementById('elementTable').getElementsByTagName('tbody')[0];
+        tbody.innerHTML = '';  // Vider le tableau avant d'ajouter les nouvelles lignes
+
+        const ref = database.ref('suivi/' + etage + '/' + element);
+        ref.once('value', function(snapshot) {
+            snapshot.forEach(function(childSnapshot) {
+                const data = childSnapshot.val();
+                const row = document.createElement('tr');
+
+                const cellNom = document.createElement('td');
+                cellNom.textContent = data.nom;
+                row.appendChild(cellNom);
+
+                const cellSection = document.createElement('td');
+                cellSection.textContent = data.section;
+                row.appendChild(cellSection);
+
+                const cellFerraillage = document.createElement('td');
+                cellFerraillage.textContent = data.ferraillage;
+                row.appendChild(cellFerraillage);
+
+                const cellAvancement = document.createElement('td');
+                const avancementDiv = document.createElement('div');
+                avancementDiv.className = 'progress ' + (data.avancement === 'ferraille' ? 'ferraille' : data.avancement === 'coffre' ? 'coffre' : 'coule');
+                avancementDiv.textContent = data.avancement === 'ferraille' ? 'Feraillé (25%)' : data.avancement === 'coffre' ? 'Coffré (50%)' : 'Coulé (100%)';
+                cellAvancement.appendChild(avancementDiv);
+                row.appendChild(cellAvancement);
+
+                tbody.appendChild(row);
+            });
+        });
+    }
+</script>
+
+</body>
+</html>
